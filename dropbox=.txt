@@ -1,0 +1,75 @@
+https://www.dropbox.com/developers/apps
+//dropbox.html
+<input type="file" id="fileid">
+<button onclick="upload()">Upload</button>
+<div id="status"></div>
+<hr>
+<div id="fileList"></div>
+
+<script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
+
+<script>
+const dbx = new Dropbox.Dropbox({ accessToken: "your_access_token" });
+const status = document.getElementById("status");
+const fileList = document.getElementById("fileList");
+
+
+async function upload() {
+  const file = document.getElementById("fileid").files[0];
+  if (!file) return alert("Choose a file!");
+  status.innerText = "Uploading...";
+  try {
+    await dbx.filesUpload({ path: '/' + file.name, contents: file, mode: 'overwrite' });
+    status.innerText = " Uploaded " + file.name;
+    listFiles();
+    alert("successfully Uploading completed");
+  } catch (e) {
+    status.innerText =  e.message;
+  }
+}
+
+async function listFiles() {
+  fileList.innerHTML = "Loading...";
+  try {
+    const res = await dbx.filesListFolder({ path: '' });
+    const files = res.result.entries;
+    if (files.length === 0) return fileList.innerHTML = "No files found.";
+    fileList.innerHTML = files.map(f =>
+      `<div>
+         ${f.name}
+        <button onclick="downloadFile('${f.name}')">DOWNLOAD</button>
+        <button onclick="deleteFile('${f.name}')">DELETE</button>
+      </div>`
+    ).join("");
+  } catch (e) {
+    fileList.innerHTML =  e.message;
+  }
+}
+listFiles();
+
+async function downloadFile(name) {
+  try {
+    const res = await dbx.filesDownload({ path: '/' + name });
+    const url = URL.createObjectURL(res.fileBlob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.click();
+    status.innerText = " Downloaded " + name;
+    alert("successfully downloading completed");
+  } catch (e) {
+    status.innerText =  e.message;
+  }
+}
+
+
+async function deleteFile(name) {
+  if (!confirm(`Delete ${name}?`)) return;
+  try {
+    await dbx.filesDeleteV2({ path: '/' + name });
+    status.innerText = " Deleted " + name;
+    listFiles();
+    alert("successfully" +name+ "deleted");
+  } catch (e) {
+    status.innerText =  e.message;
+  }
+}
+</script>
